@@ -16,7 +16,7 @@ st.markdown("""
 
 st.markdown("""<div class="hero"><h1>🌙 Sleep Rescue</h1>
 <b>청소년 수면 습관을 기록하고, 나에게 맞는 회복 전략을 찾아보는 프로젝트</b><br>
-<span class="small">충분한 수면을 대체하는 방법을 찾는 앱이 아니라, 수면 부족을 발견하고 생활습관을 개선하기 위한 교육용 웹앱입니다.</span>
+<span class="small">충분한 수면을 대체하는 방법을 찾는 앱이 아니라, 수면 부족을 발견하고 생활습관을 개선하기 위한 웹앱입니다.</span>
 </div>""", unsafe_allow_html=True)
 
 st.warning("일부러 잠을 줄여 실험하지 마세요. 평소 생활에서 관찰된 수면을 기록하는 프로젝트입니다.")
