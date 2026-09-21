@@ -79,7 +79,7 @@ with tab1:
 with tab2:
     st.header("나의 7일 수면 패턴")
     if not st.session_state.records:
-        st.info("먼저 '오늘 기록'에서 데이터를 저장하세요. 실제 수행평가에서는 5~7일 정도 기록하면 좋습니다.")
+        st.info("아직 저장된 수면 기록이 없습니다. '오늘 기록'에서 첫 기록을 시작해 보세요.")
     else:
         df = pd.DataFrame(st.session_state.records)
         a,b,c,dcol = st.columns(4)
@@ -109,7 +109,7 @@ with tab3:
     else:
         r = st.session_state.records[-1]
         st.markdown(f"<div class='big'>{r['Rescue Score']} / 100</div>", unsafe_allow_html=True)
-        st.caption("이 점수는 프로젝트용 휴리스틱이며 의학적으로 검증된 임상 수면점수가 아닙니다.")
+        st.caption("Sleep Rescue Score는 생활습관을 점검하기 위한 참고 지표이며, 의학적 진단 지표가 아닙니다.")
 
         recs = []
         if r["수면시간"] < 8:
@@ -148,4 +148,4 @@ with tab4:
         st.write("7일간 자신의 생활 데이터를 수집하고, 수면시간·스마트폰 사용·카페인 같은 행동과 다음 날 피로도의 관계를 관찰합니다. 이는 개인의 생활습관을 데이터로 이해하는 간단한 디지털 헬스 프로젝트입니다.")
 
 st.divider()
-st.caption("Sleep Rescue · 청소년 수면습관 교육 프로젝트 | 의료 진단·치료용이 아닙니다.")
+st.caption("Sleep Rescue 🌙 | 더 나은 수면 습관을 위한 생활 가이드 · 본 서비스는 의료적 진단이나 치료를 대신하지 않습니다.")
