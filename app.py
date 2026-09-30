@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import date
+from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Sleep Rescue", page_icon="🌙", layout="wide")
 
@@ -16,13 +17,49 @@ st.markdown("""
 
 st.markdown("""<div class="hero"><h1>🌙 Sleep Rescue</h1>
 <b>청소년 수면 습관을 기록하고, 나에게 맞는 회복 전략을 찾아보는 프로젝트</b><br>
-<span class="small">충분한 수면을 대체하는 방법을 찾는 앱이 아니라, 수면 부족을 발견하고 생활습관을 개선하기 위한 웹앱입니다.</span>
+<span class="small">충분한 수면을 대체하는 방법을 찾는 앱이 아니라, 수면 부족을 발견하고 생활습관을 개선하기 위한 교육용 웹앱입니다.</span>
 </div>""", unsafe_allow_html=True)
 
 st.warning("일부러 잠을 줄여 실험하지 마세요. 평소 생활에서 관찰된 수면을 기록하는 프로젝트입니다.")
 
-if "records" not in st.session_state:
-    st.session_state.records = []
+# Google Sheets persistence
+COLUMNS = ["user_id","날짜","수면시간","피로도","스마트폰(분)","늦은 카페인","낮잠","규칙적 기상","Rescue Score"]
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+def read_all():
+    try:
+        df = conn.read(worksheet="records", ttl=0)
+        if df is None or df.empty:
+            return pd.DataFrame(columns=COLUMNS)
+        for c in COLUMNS:
+            if c not in df.columns:
+                df[c] = ""
+        return df[COLUMNS].copy()
+    except Exception:
+        return pd.DataFrame(columns=COLUMNS)
+
+def write_all(df):
+    conn.update(worksheet="records", data=df[COLUMNS])
+
+def load_user(uid):
+    df = read_all()
+    if df.empty:
+        return []
+    x = df[df["user_id"].astype(str) == uid].copy()
+    if x.empty:
+        return []
+    for c in ["수면시간","피로도","스마트폰(분)","Rescue Score"]:
+        x[c] = pd.to_numeric(x[c], errors="coerce")
+    return x.sort_values("날짜").tail(7).drop(columns=["user_id"]).to_dict("records")
+
+st.sidebar.header("👤 내 기록")
+uid = st.sidebar.text_input("나만의 기록 ID", placeholder="예: moon1234",
+    help="같은 ID를 입력하면 새로고침하거나 다른 기기에서도 이전 기록을 불러올 수 있습니다.").strip()
+st.sidebar.caption("실명·이메일·학번 대신 나만 아는 별명형 ID를 사용하세요.")
+if not uid:
+    st.info("왼쪽 메뉴에서 **나만의 기록 ID**를 입력하면 수면 기록을 시작할 수 있습니다.")
+    st.stop()
+st.session_state.records = load_user(uid)
 
 tab1, tab2, tab3, tab4 = st.tabs(["📝 오늘 기록", "📊 7일 분석", "🛟 Rescue Plan", "🧠 Sleep Science"])
 
@@ -59,12 +96,18 @@ with tab1:
         sc = score_row(sleep, phone, caffeine, nap, regular, fatigue)
         # 같은 날짜가 있으면 최신 기록으로 교체
         st.session_state.records = [r for r in st.session_state.records if r["날짜"] != str(d)]
-        st.session_state.records.append({
+        new_record = {
             "날짜": str(d), "수면시간": sleep, "피로도": fatigue, "스마트폰(분)": phone,
             "늦은 카페인": caffeine, "낮잠": nap, "규칙적 기상": regular, "Rescue Score": sc
-        })
-        st.session_state.records = sorted(st.session_state.records, key=lambda x:x["날짜"])[-7:]
-        st.success(f"{d} 기록을 저장했습니다. 현재 {len(st.session_state.records)}일 기록이 있습니다.")
+        }
+        all_df = read_all()
+        if not all_df.empty:
+            keep = ~((all_df["user_id"].astype(str) == uid) & (all_df["날짜"].astype(str) == str(d)))
+            all_df = all_df[keep].copy()
+        all_df = pd.concat([all_df, pd.DataFrame([{"user_id": uid, **new_record}])], ignore_index=True)
+        write_all(all_df)
+        st.session_state.records = load_user(uid)
+        st.success(f"✅ {d} 기록이 Google Sheets에 저장되었습니다.")
 
     if st.session_state.records:
         st.subheader("저장된 기록")
@@ -72,9 +115,6 @@ with tab1:
         st.dataframe(df_show, use_container_width=True, hide_index=True)
         st.download_button("📥 내 기록 CSV로 저장", df_show.to_csv(index=False).encode("utf-8-sig"),
                            "sleep_rescue_records.csv", "text/csv")
-        if st.button("🗑️ 기록 초기화"):
-            st.session_state.records = []
-            st.rerun()
 
 with tab2:
     st.header("나의 7일 수면 패턴")
